@@ -1,0 +1,72 @@
+# pr-gate.yml — 每 PR 的 5 道机器闸门（判据单一来源：scripts/pr-grade.sh 的子检查）。
+# 触发：PR 打开 / 新 push / 重开。失败后果：失去绿级资格，按黄级起步（需 user 批准）。
+# 注意（FR-611）：CI 只看已提交树；看不见任何本地工作树脏文件。CI 全绿 ≠ SAFE_TO_MERGE，
+# agent 自动合并前仍必须在本地跑 scripts/pre-merge-check.sh（R1 原文不变）。
+name: pr-gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: pr-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  commit-lint:
+    name: commit-lint（格式 / Refs / 禁 Closes）
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/pr-grade.sh --check-commit "$PR"
+
+  ownership-check:
+    name: ownership-check（切片独占目录越界 = 0）
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/pr-grade.sh --check-ownership "$PR"
+
+  syntax:
+    name: syntax（改动的 *.sh 过 bash -n）
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/pr-grade.sh --check-syntax "$PR"
+
+  template-check:
+    name: template-check（6 小节 + R1 三件套关键词）
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/pr-grade.sh --check-template "$PR"
+
+  refs-check:
+    name: refs-check（文档引用可达：路径 / 锚点 / 行号）
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: bash scripts/pr-grade.sh --check-refs "$PR"

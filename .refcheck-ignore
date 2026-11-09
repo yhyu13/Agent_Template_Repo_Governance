@@ -1,0 +1,15 @@
+# check-refs 的忽略清单：只登记两类——确认属于外部仓的路径、或已登记为「待产出」的物料。
+# 一行一条前缀；# 开头为注释。改这里之前先确认该路径确实不需要可达。
+#
+# 纪律：不得用忽略清单掩盖真实漂移。登记之前先确认该路径确实不是本仓文件。
+
+# 外部仓路径：本仓 .claude/skills/hackathon-pitch-pipeline/ 的证据映射指向
+# Aholo 黑客松仓（yhyu13/Hackthon_Aholo_20261107）——那套方法的原始现场不在本仓，
+# 引用它们是为了让「每个主张都有出处」可追溯，不是本仓的可达性义务。
+docs/competitor-review/
+docs/onboard-value/
+docs/pitch/
+docs/prd/
+docs/review-gate/
+docs/video-ref/
+specs/005-hackathon-prd/

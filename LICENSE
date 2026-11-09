@@ -1,0 +1,5 @@
+TODO(agent): 本文件是占位。确定许可证后，替换为对应 LICENSE 全文（MIT / Apache-2.0 / GPL-3.0 等，
+从 https://spdx.org/licenses/ 取标准文本），并在 README.md 中写明许可证名称。
+若本仓库刻意不加许可证（如内部私有模板），把本文件整行替换为：
+DELETED-ON-PURPOSE: no license — internal template, all rights reserved.
+不要让一个写着 TODO 的 LICENSE 文件被复制到生产仓库里。

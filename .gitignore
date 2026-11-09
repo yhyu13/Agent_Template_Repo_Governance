@@ -1,0 +1,15 @@
+# worktree 根目录（按 GIT_WORKFLOW.md §1 的实际目录调整）
+.worktrees/
+# 构建产物
+build/
+node_modules/
+__pycache__/
+# 本地日志（上下文纪律：全量输出写这里，不进 git）
+*.log
+# 环境与密钥
+.env
+.env.*
+
+# Python 字节码缓存
+__pycache__/
+*.pyc
