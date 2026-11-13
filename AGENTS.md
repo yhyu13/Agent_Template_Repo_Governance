@@ -71,6 +71,20 @@ bash scripts/pre-merge-check.sh origin/<pr-branch> main
 `--no-verify`；`git checkout --`；`git restore .`；`git reset --hard`；`git stash`；`git clean`；
 强推（`--force` / `--force-with-lease`）；先合再补检查；丢弃或回滚任何未提交改动。
 
+### R1.3 主工作区被他人占用的协调路径
+
+多 agent 并行时，「主线 0 脏」常常不是自己能决定的：别的会话正在主工作区改文件，R1 于是永久 `BLOCKED`。
+这时**默认动作是停下，不是清场**。按顺序处理：
+
+1. **先确认是谁**：`git status --porcelain` + `git worktree list`，判断脏文件属于哪个会话/切片。
+2. **不要碰别人的文件**：R1.2 的禁止项全部适用。为了让检查变绿而 stash / restore / 删除他人改动，
+   等同于丢弃现场，按 `BLOCKED` 处理并记入 issue。
+3. **通知写者**：在对应 issue 发进度评论，写明「主线被 X 文件阻塞，PR #N 等待合并」，把等待摆到台面上。
+4. **等待上限 1 个工作日**：超时仍无人认领，由 coordinator（或 user）决定：由写者先提交 WIP 到一个分支，
+   或明确授权把该路径登记为「冻结路径」后单独处理。
+5. **根因规避**：所有切片一律在独立 worktree 里开工（R4），主工作区只做集成与检查。
+   主工作区不承担开发，就不会长期脏。
+
 ## R2 默认分支与停止条件
 
 开始写任何文件之前，MUST 执行 `git branch --show-current` 与 `git rev-parse --show-toplevel`。
@@ -136,6 +150,32 @@ bash scripts/new-slice.sh <slice-name> [base]   # 唯一写操作是 git worktre
 
 评级记录写进 PR 评论，格式见 `scripts/pr-grade.sh` 的 `GRADE=` 块。
 
+## R6 自动化通道（机器提交）
+
+有定时任务的仓（submodule 指针同步、抓取、报表产出）不能每个周期都开一个 PR。允许**唯一一种**
+绕过 R1~R5 的写入方式，称为自动化通道。它必须同时满足下面全部条件，缺一条就必须走正常 PR：
+
+**准入**
+
+- 提交者是一个被明确登记的自动化任务（写进 `AGENTS.md` 的通道表：任务名 + 频率 + 允许提交的路径）。
+- 提交内容**只包含机器生成的、可追溯到上游哈希的指针/产物**（例如 gitlink、lock 文件、抓取快照）。
+  源码、文档、治理面文件一律不得走这条通道。
+- 未在通道表登记的自动化，一律视为普通 agent，不得直推。
+
+**护栏**
+
+1. 只 `git add <登记路径>`；禁止 `git add -A`、禁止 `git commit -a`。
+2. push 前 MUST `git fetch origin`；落后则 `git pull --rebase`；出现冲突 MUST `git rebase --abort` 后停下报告，
+   不得手工解冲突。
+3. 禁止 `--force` / `--force-with-lease`；禁止改 `.gitmodules`、分支、标签、治理面文件。
+4. 提交信息 MUST 使用登记的前缀（如 `chore(submodule):`），便于把机器提交与人工提交分开审计。
+5. 自动化任务的提交不获得 R5 的任何授权：它不评审、不合 PR、不关 issue。
+
+**审计**
+
+- 每条通道在 `AGENTS.md` 用一张表登记，人和审计脚本都能一眼看出「谁在写 main」。
+- 通道新增或扩大路径范围，属于治理面改动（红级），须 user/admin 批准。
+
 ## §1.5 文档引用的检查归属（分级声明）
 
 文档引用失准分三类，检查手段不同，**不要指望 agent 每次自己记得查**：
@@ -176,6 +216,8 @@ bash scripts/new-slice.sh <slice-name> [base]   # 唯一写操作是 git worktre
 
 - 不整读未变的文件；重读用 offset/limit。
 - 测试/构建全量输出写进 git-ignored log，只看 tail（≤40 行）+ 立即捕获退出码。
+- 一次性产物（抓取回显、探针渲染、临时 txt、patch 草稿）一律写 `scratch/`（已 ignore）；
+  仓根不得新增临时文件——否则 `git status` 被淹，R1 的脏文件检查也就失去意义。
 - 先 `git diff --stat`，只展开在审文件的全量 diff。
 - 列目录用 `git ls-files` / `-Depth 2`；定位用 `grep -l`，找到再读。
 - 输出预计 >200 行就写临时文件再按需读片段。
