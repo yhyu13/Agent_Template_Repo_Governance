@@ -13,3 +13,9 @@ __pycache__/
 # Python 字节码缓存
 __pycache__/
 *.pyc
+
+# 一次性产物（抓取回显、探针渲染、临时 patch 草稿）的唯一落点：
+# 全部丢进 scratch/，不要散在仓根，否则 git status 会被淹掉
+scratch/
+*probe*/
+*probe-tmp/
